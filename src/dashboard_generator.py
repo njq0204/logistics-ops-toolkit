@@ -1,16 +1,28 @@
 """数据大屏生成器 — ECharts 可视化大屏"""
 
 import json
+import math
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 from pipeline import AnalysisResult, result_to_api_dict
+
+
+def _sanitize_for_json(obj: Any) -> Any:
+    """将 NaN / Inf 转为 null，确保输出合法 JSON"""
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_json(v) for v in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
 
 
 def export_dashboard_data(result: AnalysisResult, output_path: Union[str, Path]) -> Path:
     """导出大屏 JSON 数据"""
     output_path = Path(output_path)
-    data = result_to_api_dict(result)
+    data = _sanitize_for_json(result_to_api_dict(result))
     output_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return output_path
 
@@ -19,9 +31,15 @@ def generate_bigscreen_html(
     output_path: Union[str, Path],
     project_name: str,
     refresh_seconds: int = 60,
+    embedded_data: dict = None,
 ) -> Path:
-    """生成数据大屏 HTML（ECharts + 自动刷新）"""
+    """生成数据大屏 HTML（ECharts + 内嵌数据 + 自动刷新）"""
     output_path = Path(output_path)
+    embedded_json = ""
+    if embedded_data:
+        safe = json.dumps(_sanitize_for_json(embedded_data), ensure_ascii=False)
+        safe = safe.replace("</", "<\\/")
+        embedded_json = f"<script>window.__DASHBOARD_DATA__ = {safe};</script>"
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -29,72 +47,89 @@ def generate_bigscreen_html(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{project_name} - 数据大屏</title>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
-body{{background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden;height:100vh}}
+html,body{{height:100%;background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden}}
+.page{{display:flex;flex-direction:column;height:100vh}}
 .bg-grid{{position:fixed;inset:0;background:
   linear-gradient(rgba(0,102,204,.05) 1px,transparent 1px),
   linear-gradient(90deg,rgba(0,102,204,.05) 1px,transparent 1px);
-  background-size:40px 40px;pointer-events:none}}
-.header{{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;
-  background:linear-gradient(180deg,rgba(0,102,204,.3),transparent);border-bottom:1px solid rgba(0,150,255,.3)}}
-.header h1{{font-size:28px;letter-spacing:6px;background:linear-gradient(90deg,#4fc3f7,#fff,#4fc3f7);
+  background-size:40px 40px;pointer-events:none;z-index:0}}
+.header{{flex:0 0 64px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+  background:linear-gradient(180deg,rgba(0,102,204,.3),transparent);border-bottom:1px solid rgba(0,150,255,.3);z-index:1}}
+.header h1{{font-size:24px;letter-spacing:4px;background:linear-gradient(90deg,#4fc3f7,#fff,#4fc3f7);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent}}
-.header-right{{display:flex;gap:24px;align-items:center;font-size:14px;color:#7eb8da}}
-.header-right .clock{{font-size:22px;color:#4fc3f7;font-family:monospace}}
+.header-right{{display:flex;gap:20px;align-items:center;font-size:13px;color:#7eb8da}}
+.header-right .clock{{font-size:18px;color:#4fc3f7;font-family:monospace}}
 .refresh-badge{{background:rgba(0,150,255,.15);border:1px solid rgba(0,150,255,.4);
   padding:4px 12px;border-radius:20px;font-size:12px}}
-.main{{display:grid;grid-template-columns:1fr 1.6fr 1fr;grid-template-rows:1fr 1fr;gap:12px;
-  padding:12px;height:calc(100vh - 70px - 36px)}}
+.content{{flex:1;display:flex;flex-direction:column;gap:10px;padding:10px;min-height:0;z-index:1}}
+.row-top{{flex:3;display:grid;grid-template-columns:1fr 1.6fr 1fr;grid-template-rows:1fr 1fr;gap:10px;min-height:0}}
+.row-bottom{{flex:2;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;min-height:0}}
 .panel{{background:rgba(6,30,60,.75);border:1px solid rgba(0,150,255,.25);border-radius:8px;
-  position:relative;overflow:hidden}}
-.panel::before{{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,#0096ff,transparent)}}
-.panel-title{{padding:10px 14px;font-size:14px;color:#4fc3f7;border-bottom:1px solid rgba(0,150,255,.15);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden}}
+.panel::before{{content:'';height:2px;background:linear-gradient(90deg,transparent,#0096ff,transparent)}}
+.panel-title{{flex:0 0 36px;padding:8px 12px;font-size:13px;color:#4fc3f7;border-bottom:1px solid rgba(0,150,255,.15);
   display:flex;align-items:center;gap:8px}}
 .panel-title::before{{content:'';width:3px;height:14px;background:#0096ff;border-radius:2px}}
-.panel-body{{padding:8px;height:calc(100% - 40px)}}
-.kpi-grid{{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:100%}}
+.panel-body{{flex:1;padding:6px;min-height:0;position:relative}}
+.kpi-grid{{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%}}
 .kpi-card{{background:rgba(0,80,160,.2);border:1px solid rgba(0,150,255,.2);border-radius:6px;
-  padding:12px;text-align:center;display:flex;flex-direction:column;justify-content:center}}
-.kpi-value{{font-size:26px;font-weight:700;color:#4fc3f7;font-family:monospace}}
+  padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center}}
+.kpi-value{{font-size:22px;font-weight:700;color:#4fc3f7;font-family:monospace}}
 .kpi-label{{font-size:11px;color:#7eb8da;margin-top:4px}}
-.chart-box{{width:100%;height:100%}}
-.alert-scroll{{height:100%;overflow:hidden;position:relative}}
+.chart-box{{width:100%;height:100%;min-height:120px}}
+.alert-scroll{{height:100%;overflow:hidden}}
 .alert-list{{animation:scrollUp 20s linear infinite}}
 .alert-item{{padding:8px 12px;margin-bottom:6px;border-radius:4px;font-size:12px;
   background:rgba(255,80,80,.1);border-left:3px solid #ff5050}}
 .alert-item.warn{{background:rgba(255,180,0,.1);border-left-color:#ffb400}}
 .alert-item.ok{{background:rgba(0,200,100,.1);border-left-color:#00c864}}
 @keyframes scrollUp{{0%{{transform:translateY(0)}}100%{{transform:translateY(-50%)}}}}
-.footer{{height:36px;display:flex;align-items:center;justify-content:center;
-  font-size:12px;color:#4a7a9a;border-top:1px solid rgba(0,150,255,.15)}}
+.footer{{flex:0 0 30px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#4a7a9a;border-top:1px solid rgba(0,150,255,.15);z-index:1}}
 .center-panel{{grid-row:1/3;grid-column:2}}
-.gauge-row{{display:flex;height:100%;gap:8px}}
-.gauge-box{{flex:1;height:100%}}
+.gauge-row{{display:flex;height:100%;gap:6px}}
+.gauge-box{{flex:1;min-height:120px}}
 .rank-table{{width:100%;font-size:12px;border-collapse:collapse}}
 .rank-table th{{color:#4fc3f7;padding:6px 8px;text-align:left;border-bottom:1px solid rgba(0,150,255,.2)}}
 .rank-table td{{padding:5px 8px;border-bottom:1px solid rgba(0,150,255,.08);color:#b0cce0}}
-.rank-table tr:hover{{background:rgba(0,100,200,.15)}}
-.rank-num{{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;
-  border-radius:50%;font-size:11px;font-weight:bold}}
+.rank-num{{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;font-size:11px;font-weight:bold}}
 .rank-1{{background:#ffd700;color:#000}}.rank-2{{background:#c0c0c0;color:#000}}.rank-3{{background:#cd7f32;color:#fff}}
 .rank-n{{background:rgba(0,150,255,.2);color:#4fc3f7}}
+.error-banner{{background:rgba(255,80,80,.2);border:1px solid #ff5050;color:#ffaaaa;
+  padding:10px 20px;text-align:center;font-size:13px;display:none;z-index:2}}
+.goal-list{{height:100%;overflow-y:auto;padding:4px}}
+.goal-item{{margin-bottom:10px}}
+.goal-header{{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:#b0cce0}}
+.goal-name{{color:#4fc3f7}}
+.goal-status{{font-size:11px;padding:1px 8px;border-radius:10px}}
+.goal-status.achieved{{background:rgba(0,200,100,.2);color:#00c864}}
+.goal-status.on_track{{background:rgba(0,150,255,.2);color:#4fc3f7}}
+.goal-status.at_risk{{background:rgba(255,180,0,.2);color:#ffb400}}
+.goal-status.behind{{background:rgba(255,80,80,.2);color:#ff5050}}
+.goal-bar{{height:8px;background:rgba(0,50,100,.5);border-radius:4px;overflow:hidden}}
+.goal-bar-fill{{height:100%;border-radius:4px;transition:width 1s ease}}
+.goal-detail{{font-size:10px;color:#6a8aaa;margin-top:2px}}
 </style>
 </head>
 <body>
+<div class="page">
 <div class="bg-grid"></div>
+<div class="error-banner" id="errorBanner"></div>
 <div class="header">
-  <h1>📊 {project_name}</h1>
+  <h1>{project_name}</h1>
   <div class="header-right">
-    <span class="refresh-badge" id="refreshBadge">自动刷新 {refresh_seconds}s</span>
+    <span class="refresh-badge">自动刷新 {refresh_seconds}s</span>
     <span id="updateTime">数据加载中...</span>
+    <span id="diagScore" style="font-size:16px;color:#ffb400;font-weight:bold"></span>
     <span class="clock" id="clock"></span>
   </div>
 </div>
 
-<div class="main">
+<div class="content">
+<div class="row-top">
   <!-- 左列 -->
   <div class="panel">
     <div class="panel-title">核心 KPI 指标</div>
@@ -120,12 +155,12 @@ body{{background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;ove
     </div></div>
   </div>
   <div class="panel">
-    <div class="panel-title">实时预警滚动</div>
+    <div class="panel-title">预警 & 行动建议</div>
     <div class="panel-body"><div class="alert-scroll"><div class="alert-list" id="alertList"></div></div></div>
   </div>
 </div>
 
-<div class="main" style="height:calc(35vh - 36px);grid-template-columns:1fr 1fr 1fr;margin-top:-12px">
+<div class="row-bottom">
   <div class="panel">
     <div class="panel-title">月度营收趋势</div>
     <div class="panel-body"><div class="chart-box" id="trendChart"></div></div>
@@ -135,13 +170,18 @@ body{{background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;ove
     <div class="panel-body"><div class="chart-box" id="customerChart"></div></div>
   </div>
   <div class="panel">
-    <div class="panel-title">销售员 TOP 5</div>
-    <div class="panel-body" id="salesRank" style="overflow-y:auto"></div>
+    <div class="panel-title">经营目标追踪</div>
+    <div class="panel-body" style="display:flex;flex-direction:column;gap:4px">
+      <div class="chart-box" id="goalChart" style="flex:1.2;min-height:80px"></div>
+      <div class="goal-list" id="goalList" style="flex:1"></div>
+    </div>
   </div>
 </div>
+</div>
 
-<div class="footer">物流经营数据大屏 v3.0 · 德邦经营方向 · 海豚生 · 按 F11 全屏展示</div>
-
+<div class="footer">物流经营数据大屏 v3.1 · 德邦经营方向 · 海豚生 · 按 F11 全屏展示</div>
+</div>
+{embedded_json}
 <script>
 const REFRESH_SEC = {refresh_seconds};
 let charts = {{}};
@@ -188,20 +228,42 @@ function renderKPI(metrics) {{
   }});
 }}
 
+function showError(msg) {{
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.style.display = 'block';
+}}
+
 function initCharts() {{
-  ['regionChart','productChart','trendChart','customerChart','gaugeMargin','gaugeOnTime'].forEach(id => {{
+  if (typeof echarts === 'undefined') {{
+    showError('ECharts 加载失败，请检查网络连接后刷新页面');
+    return false;
+  }}
+  ['regionChart','productChart','trendChart','customerChart','gaugeMargin','gaugeOnTime','goalChart'].forEach(id => {{
     const el = document.getElementById(id);
     if (el) charts[id] = echarts.init(el, null, {{renderer:'canvas'}});
   }});
-  window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+  window.addEventListener('resize', () => Object.values(charts).forEach(c => c && c.resize()));
+  return true;
+}}
+
+function resizeCharts() {{
+  setTimeout(() => Object.values(charts).forEach(c => c && c.resize()), 100);
 }}
 
 function renderDashboard(data) {{
+  if (!data || !data.metrics) {{
+    showError('数据格式错误');
+    return;
+  }}
+  document.getElementById('errorBanner').style.display = 'none';
   document.getElementById('updateTime').textContent = '更新: ' + data.updated_at;
 
   renderKPI(data.metrics);
+  renderGoals(data.goals || [], data.goal_period || '');
+  renderDiagnosis(data.diagnosis || {{}});
 
-  // 区域柱状图
+  if (!charts.regionChart) return;
   const regions = data.regions || [];
   charts.regionChart.setOption({{
     tooltip: {{trigger:'axis'}},
@@ -271,38 +333,95 @@ function renderDashboard(data) {{
   charts.gaugeMargin.setOption(gaugeOpt(margin,'毛利率','#0096ff'));
   charts.gaugeOnTime.setOption(gaugeOpt(onTime,'准时率','#00c864'));
 
-  // 预警
+  // 目标进度横向图
+  const goals = data.goals || [];
+  if (charts.goalChart && goals.length > 0) {{
+    const colors = {{achieved:'#00c864',on_track:'#0096ff',at_risk:'#ffb400',behind:'#ff5050'}};
+    charts.goalChart.setOption({{
+      tooltip:{{trigger:'axis',formatter:p=>`${{p[0].name}}: ${{p[0].value}}%`}},
+      grid:{{left:90,right:40,bottom:10,top:10}},
+      xAxis:{{type:'value',max:100,axisLabel:{{color:'#7eb8da',formatter:'{{value}}%'}}}},
+      yAxis:{{type:'category',data:goals.map(g=>g.name).reverse(),axisLabel:{{color:'#7eb8da',fontSize:10}}}},
+      series:[{{type:'bar',data:goals.map(g=>({{value:Math.min(g.progress_pct,100),itemStyle:{{color:colors[g.status]||'#0096ff'}}}})).reverse(),
+        barWidth:14,label:{{show:true,position:'right',formatter:p=>p.value+'%',color:'#b0cce0',fontSize:10}}
+      }}]
+    }});
+  }}
+
+  // 预警 + 行动建议
   const alerts = data.alerts || [];
+  const actions = (data.diagnosis || {{}}).actions || [];
   const alertEl = document.getElementById('alertList');
-  if (alerts.length === 0) {{
+  let items = '';
+  if (actions.length) {{
+    items += actions.slice(0,5).map(a => `<div class="alert-item warn">[${{a.priority}}][${{a.area}}] ${{a.action}}</div>`).join('');
+  }}
+  if (alerts.length === 0 && !items) {{
     alertEl.innerHTML = '<div class="alert-item ok">所有指标正常，暂无预警</div>';
   }} else {{
-    const items = alerts.map(a => `<div class="alert-item ${{a.level==='danger'?'':'warn'}}">[${{a.category}}] ${{a.message}}</div>`).join('');
+    if (!items) items = alerts.map(a => `<div class="alert-item ${{a.level==='danger'?'':'warn'}}">[${{a.category}}] ${{a.message}}</div>`).join('');
+    else items += alerts.map(a => `<div class="alert-item ${{a.level==='danger'?'':'warn'}}">[${{a.category}}] ${{a.message}}</div>`).join('');
     alertEl.innerHTML = items + items;
   }}
 
-  // 销售排名
-  const sales = (data.sales || []).slice(0, 5);
-  const rankEl = document.getElementById('salesRank');
-  rankEl.innerHTML = '<table class="rank-table"><tr><th>排名</th><th>销售员</th><th>营收</th><th>毛利率</th></tr>' +
-    sales.map((s,i) => `<tr><td><span class="rank-num rank-${{i<3?i+1:'n'}}">${{i+1}}</span></td><td>${{s.sales_rep}}</td><td>${{(s.total_revenue/10000).toFixed(1)}}万</td><td>${{s.margin_rate}}%</td></tr>`).join('') +
-    '</table>';
+  resizeCharts();
+}}
+
+function renderDiagnosis(diag) {{
+  const el = document.getElementById('diagScore');
+  if (!diag || !diag.score) {{ el.textContent = ''; return; }}
+  el.textContent = '评分 ' + diag.score + '/100';
+}}
+
+function renderGoals(goals, period) {{
+  const el = document.getElementById('goalList');
+  if (!goals.length) {{
+    el.innerHTML = '<div style="color:#6a8aaa;font-size:12px;padding:10px">未配置经营目标，请编辑 config/settings.yaml</div>';
+    return;
+  }}
+  const colors = {{achieved:'#00c864',on_track:'#0096ff',at_risk:'#ffb400',behind:'#ff5050'}};
+  el.innerHTML = (period ? `<div style="font-size:11px;color:#6a8aaa;margin-bottom:8px">统计周期: ${{period}}</div>` : '') +
+    goals.map(g => `
+    <div class="goal-item">
+      <div class="goal-header">
+        <span class="goal-name">${{g.name}}</span>
+        <span class="goal-status ${{g.status}}">${{g.status_label}} ${{g.progress_pct}}%</span>
+      </div>
+      <div class="goal-bar"><div class="goal-bar-fill" style="width:${{Math.min(g.progress_pct,100)}}%;background:${{colors[g.status]||'#0096ff'}}"></div></div>
+      <div class="goal-detail">实际 ${{g.actual}} / 目标 ${{g.target}}</div>
+    </div>`).join('');
 }}
 
 async function loadData() {{
-  try {{
-    const resp = await fetch('data.json?t=' + Date.now());
-    const data = await resp.json();
-    renderDashboard(data);
-  }} catch(e) {{
-    document.getElementById('updateTime').textContent = '数据加载失败，请运行 python main.py';
-    console.error(e);
+  // 优先使用 HTML 内嵌数据（支持直接双击打开）
+  if (window.__DASHBOARD_DATA__) {{
+    renderDashboard(window.__DASHBOARD_DATA__);
+  }}
+
+  // 通过 Web 服务运行时，拉取最新数据
+  if (location.protocol === 'file:') return;
+
+  for (const url of ['/api/data', 'data.json']) {{
+    try {{
+      const resp = await fetch(url + '?t=' + Date.now());
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      renderDashboard(data);
+      return;
+    }} catch(e) {{
+      console.warn('加载失败:', url, e);
+    }}
+  }}
+
+  if (!window.__DASHBOARD_DATA__) {{
+    showError('数据加载失败，请先运行: python main.py');
   }}
 }}
 
-initCharts();
-loadData();
-setInterval(loadData, REFRESH_SEC * 1000);
+window.addEventListener('DOMContentLoaded', () => {{
+  if (initCharts()) loadData();
+  setInterval(loadData, REFRESH_SEC * 1000);
+}});
 </script>
 </body>
 </html>"""

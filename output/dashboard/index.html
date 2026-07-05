@@ -4,72 +4,89 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>物流经营数据分析平台 - 数据大屏</title>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden;height:100vh}
+html,body{height:100%;background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden}
+.page{display:flex;flex-direction:column;height:100vh}
 .bg-grid{position:fixed;inset:0;background:
   linear-gradient(rgba(0,102,204,.05) 1px,transparent 1px),
   linear-gradient(90deg,rgba(0,102,204,.05) 1px,transparent 1px);
-  background-size:40px 40px;pointer-events:none}
-.header{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 30px;
-  background:linear-gradient(180deg,rgba(0,102,204,.3),transparent);border-bottom:1px solid rgba(0,150,255,.3)}
-.header h1{font-size:28px;letter-spacing:6px;background:linear-gradient(90deg,#4fc3f7,#fff,#4fc3f7);
+  background-size:40px 40px;pointer-events:none;z-index:0}
+.header{flex:0 0 64px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+  background:linear-gradient(180deg,rgba(0,102,204,.3),transparent);border-bottom:1px solid rgba(0,150,255,.3);z-index:1}
+.header h1{font-size:24px;letter-spacing:4px;background:linear-gradient(90deg,#4fc3f7,#fff,#4fc3f7);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.header-right{display:flex;gap:24px;align-items:center;font-size:14px;color:#7eb8da}
-.header-right .clock{font-size:22px;color:#4fc3f7;font-family:monospace}
+.header-right{display:flex;gap:20px;align-items:center;font-size:13px;color:#7eb8da}
+.header-right .clock{font-size:18px;color:#4fc3f7;font-family:monospace}
 .refresh-badge{background:rgba(0,150,255,.15);border:1px solid rgba(0,150,255,.4);
   padding:4px 12px;border-radius:20px;font-size:12px}
-.main{display:grid;grid-template-columns:1fr 1.6fr 1fr;grid-template-rows:1fr 1fr;gap:12px;
-  padding:12px;height:calc(100vh - 70px - 36px)}
+.content{flex:1;display:flex;flex-direction:column;gap:10px;padding:10px;min-height:0;z-index:1}
+.row-top{flex:3;display:grid;grid-template-columns:1fr 1.6fr 1fr;grid-template-rows:1fr 1fr;gap:10px;min-height:0}
+.row-bottom{flex:2;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;min-height:0}
 .panel{background:rgba(6,30,60,.75);border:1px solid rgba(0,150,255,.25);border-radius:8px;
-  position:relative;overflow:hidden}
-.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,#0096ff,transparent)}
-.panel-title{padding:10px 14px;font-size:14px;color:#4fc3f7;border-bottom:1px solid rgba(0,150,255,.15);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.panel::before{content:'';height:2px;background:linear-gradient(90deg,transparent,#0096ff,transparent)}
+.panel-title{flex:0 0 36px;padding:8px 12px;font-size:13px;color:#4fc3f7;border-bottom:1px solid rgba(0,150,255,.15);
   display:flex;align-items:center;gap:8px}
 .panel-title::before{content:'';width:3px;height:14px;background:#0096ff;border-radius:2px}
-.panel-body{padding:8px;height:calc(100% - 40px)}
-.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;height:100%}
+.panel-body{flex:1;padding:6px;min-height:0;position:relative}
+.kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:100%}
 .kpi-card{background:rgba(0,80,160,.2);border:1px solid rgba(0,150,255,.2);border-radius:6px;
-  padding:12px;text-align:center;display:flex;flex-direction:column;justify-content:center}
-.kpi-value{font-size:26px;font-weight:700;color:#4fc3f7;font-family:monospace}
+  padding:10px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+.kpi-value{font-size:22px;font-weight:700;color:#4fc3f7;font-family:monospace}
 .kpi-label{font-size:11px;color:#7eb8da;margin-top:4px}
-.chart-box{width:100%;height:100%}
-.alert-scroll{height:100%;overflow:hidden;position:relative}
+.chart-box{width:100%;height:100%;min-height:120px}
+.alert-scroll{height:100%;overflow:hidden}
 .alert-list{animation:scrollUp 20s linear infinite}
 .alert-item{padding:8px 12px;margin-bottom:6px;border-radius:4px;font-size:12px;
   background:rgba(255,80,80,.1);border-left:3px solid #ff5050}
 .alert-item.warn{background:rgba(255,180,0,.1);border-left-color:#ffb400}
 .alert-item.ok{background:rgba(0,200,100,.1);border-left-color:#00c864}
 @keyframes scrollUp{0%{transform:translateY(0)}100%{transform:translateY(-50%)}}
-.footer{height:36px;display:flex;align-items:center;justify-content:center;
-  font-size:12px;color:#4a7a9a;border-top:1px solid rgba(0,150,255,.15)}
+.footer{flex:0 0 30px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#4a7a9a;border-top:1px solid rgba(0,150,255,.15);z-index:1}
 .center-panel{grid-row:1/3;grid-column:2}
-.gauge-row{display:flex;height:100%;gap:8px}
-.gauge-box{flex:1;height:100%}
+.gauge-row{display:flex;height:100%;gap:6px}
+.gauge-box{flex:1;min-height:120px}
 .rank-table{width:100%;font-size:12px;border-collapse:collapse}
 .rank-table th{color:#4fc3f7;padding:6px 8px;text-align:left;border-bottom:1px solid rgba(0,150,255,.2)}
 .rank-table td{padding:5px 8px;border-bottom:1px solid rgba(0,150,255,.08);color:#b0cce0}
-.rank-table tr:hover{background:rgba(0,100,200,.15)}
-.rank-num{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;
-  border-radius:50%;font-size:11px;font-weight:bold}
+.rank-num{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;font-size:11px;font-weight:bold}
 .rank-1{background:#ffd700;color:#000}.rank-2{background:#c0c0c0;color:#000}.rank-3{background:#cd7f32;color:#fff}
 .rank-n{background:rgba(0,150,255,.2);color:#4fc3f7}
+.error-banner{background:rgba(255,80,80,.2);border:1px solid #ff5050;color:#ffaaaa;
+  padding:10px 20px;text-align:center;font-size:13px;display:none;z-index:2}
+.goal-list{height:100%;overflow-y:auto;padding:4px}
+.goal-item{margin-bottom:10px}
+.goal-header{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px;color:#b0cce0}
+.goal-name{color:#4fc3f7}
+.goal-status{font-size:11px;padding:1px 8px;border-radius:10px}
+.goal-status.achieved{background:rgba(0,200,100,.2);color:#00c864}
+.goal-status.on_track{background:rgba(0,150,255,.2);color:#4fc3f7}
+.goal-status.at_risk{background:rgba(255,180,0,.2);color:#ffb400}
+.goal-status.behind{background:rgba(255,80,80,.2);color:#ff5050}
+.goal-bar{height:8px;background:rgba(0,50,100,.5);border-radius:4px;overflow:hidden}
+.goal-bar-fill{height:100%;border-radius:4px;transition:width 1s ease}
+.goal-detail{font-size:10px;color:#6a8aaa;margin-top:2px}
 </style>
 </head>
 <body>
+<div class="page">
 <div class="bg-grid"></div>
+<div class="error-banner" id="errorBanner"></div>
 <div class="header">
-  <h1>📊 物流经营数据分析平台</h1>
+  <h1>物流经营数据分析平台</h1>
   <div class="header-right">
-    <span class="refresh-badge" id="refreshBadge">自动刷新 60s</span>
+    <span class="refresh-badge">自动刷新 60s</span>
     <span id="updateTime">数据加载中...</span>
+    <span id="diagScore" style="font-size:16px;color:#ffb400;font-weight:bold"></span>
     <span class="clock" id="clock"></span>
   </div>
 </div>
 
-<div class="main">
+<div class="content">
+<div class="row-top">
   <!-- 左列 -->
   <div class="panel">
     <div class="panel-title">核心 KPI 指标</div>
@@ -95,12 +112,12 @@ body{background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;over
     </div></div>
   </div>
   <div class="panel">
-    <div class="panel-title">实时预警滚动</div>
+    <div class="panel-title">预警 & 行动建议</div>
     <div class="panel-body"><div class="alert-scroll"><div class="alert-list" id="alertList"></div></div></div>
   </div>
 </div>
 
-<div class="main" style="height:calc(35vh - 36px);grid-template-columns:1fr 1fr 1fr;margin-top:-12px">
+<div class="row-bottom">
   <div class="panel">
     <div class="panel-title">月度营收趋势</div>
     <div class="panel-body"><div class="chart-box" id="trendChart"></div></div>
@@ -110,13 +127,18 @@ body{background:#020818;color:#fff;font-family:'Microsoft YaHei',sans-serif;over
     <div class="panel-body"><div class="chart-box" id="customerChart"></div></div>
   </div>
   <div class="panel">
-    <div class="panel-title">销售员 TOP 5</div>
-    <div class="panel-body" id="salesRank" style="overflow-y:auto"></div>
+    <div class="panel-title">经营目标追踪</div>
+    <div class="panel-body" style="display:flex;flex-direction:column;gap:4px">
+      <div class="chart-box" id="goalChart" style="flex:1.2;min-height:80px"></div>
+      <div class="goal-list" id="goalList" style="flex:1"></div>
+    </div>
   </div>
 </div>
+</div>
 
-<div class="footer">物流经营数据大屏 v3.0 · 德邦经营方向 · 海豚生 · 按 F11 全屏展示</div>
-
+<div class="footer">物流经营数据大屏 v3.1 · 德邦经营方向 · 海豚生 · 按 F11 全屏展示</div>
+</div>
+<script>window.__DASHBOARD_DATA__ = {"updated_at": "2026-07-06 02:51:58", "data_summary": {"总记录数": 150, "时间范围": "2024-01-05 ~ 2025-05-08", "区域数": 5, "产品类型数": 6, "客户数": 14}, "metrics": {"总营收(元)": 327997.61, "总成本(元)": 238517.38, "毛利(元)": 89480.23, "毛利率(%)": 27.28, "总单量": 150, "单均营收(元)": 2186.65, "单均重量(kg)": 1234.7, "总货量(kg)": 185204.9, "平均时效(天)": 2.7, "准时率(%)": 74.0, "平均满意度": 3.97, "退单率(%)": 3.33, "总计费重量(kg)": 219232.1, "单公斤营收(元)": 1.496, "单公斤成本(元)": 1.088, "单公斤毛利(元)": 0.408, "客诉率(%)": 14.0, "跨省占比(%)": 40.67}, "regions": [{"region": "华中", "order_count": 30, "total_revenue": 97965.64, "total_cost": 70762.71, "avg_weight": 3594.413333333333, "avg_satisfaction": 3.93, "avg_delivery": 2.7, "gross_profit": 27202.929999999993, "margin_rate": 27.77}, {"region": "西南", "order_count": 33, "total_revenue": 83439.89, "total_cost": 61511.1, "avg_weight": 1492.7575757575758, "avg_satisfaction": 3.91, "avg_delivery": 3.0, "gross_profit": 21928.79, "margin_rate": 26.28}, {"region": "华南", "order_count": 35, "total_revenue": 68844.94, "total_cost": 50194.53, "avg_weight": 495.1485714285715, "avg_satisfaction": 3.89, "avg_delivery": 2.9, "gross_profit": 18650.410000000003, "margin_rate": 27.09}, {"region": "华东", "order_count": 29, "total_revenue": 44573.840000000004, "total_cost": 32494.64, "avg_weight": 237.12758620689655, "avg_satisfaction": 4.14, "avg_delivery": 2.7, "gross_profit": 12079.200000000004, "margin_rate": 27.1}, {"region": "华北", "order_count": 23, "total_revenue": 33173.3, "total_cost": 23554.4, "avg_weight": 169.76521739130433, "avg_satisfaction": 4.0, "avg_delivery": 2.3, "gross_profit": 9618.900000000001, "margin_rate": 29.0}], "monthly": [{"month": "2024-01", "order_count": 11, "total_revenue": 16841.72, "total_cost": 12114.17, "avg_satisfaction": 4.0, "gross_profit": 4727.550000000001, "margin_rate": 28.07}, {"month": "2024-02", "order_count": 5, "total_revenue": 8226.22, "total_cost": 5975.9, "avg_satisfaction": 4.0, "gross_profit": 2250.3199999999997, "margin_rate": 27.36}, {"month": "2024-03", "order_count": 6, "total_revenue": 10366.43, "total_cost": 7584.97, "avg_satisfaction": 4.17, "gross_profit": 2781.46, "margin_rate": 26.83}, {"month": "2024-04", "order_count": 10, "total_revenue": 22568.41, "total_cost": 17073.91, "avg_satisfaction": 3.9, "gross_profit": 5494.5, "margin_rate": 24.35}, {"month": "2024-05", "order_count": 15, "total_revenue": 22215.46, "total_cost": 16174.58, "avg_satisfaction": 3.67, "gross_profit": 6040.879999999999, "margin_rate": 27.19}, {"month": "2024-06", "order_count": 5, "total_revenue": 7543.5599999999995, "total_cost": 5389.900000000001, "avg_satisfaction": 4.2, "gross_profit": 2153.659999999999, "margin_rate": 28.55}, {"month": "2024-07", "order_count": 11, "total_revenue": 38852.48, "total_cost": 28112.54, "avg_satisfaction": 4.09, "gross_profit": 10739.940000000002, "margin_rate": 27.64}, {"month": "2024-08", "order_count": 16, "total_revenue": 35673.93, "total_cost": 25229.68, "avg_satisfaction": 4.12, "gross_profit": 10444.25, "margin_rate": 29.28}, {"month": "2024-09", "order_count": 6, "total_revenue": 23110.719999999998, "total_cost": 16632.9, "avg_satisfaction": 4.33, "gross_profit": 6477.819999999996, "margin_rate": 28.03}, {"month": "2024-10", "order_count": 8, "total_revenue": 20142.1, "total_cost": 14690.52, "avg_satisfaction": 4.25, "gross_profit": 5451.579999999998, "margin_rate": 27.07}, {"month": "2024-11", "order_count": 9, "total_revenue": 30306.38, "total_cost": 22120.670000000002, "avg_satisfaction": 3.44, "gross_profit": 8185.709999999999, "margin_rate": 27.01}, {"month": "2024-12", "order_count": 17, "total_revenue": 35857.08, "total_cost": 25755.98, "avg_satisfaction": 3.94, "gross_profit": 10101.100000000002, "margin_rate": 28.17}, {"month": "2025-01", "order_count": 8, "total_revenue": 13066.65, "total_cost": 9741.36, "avg_satisfaction": 3.0, "gross_profit": 3325.289999999999, "margin_rate": 25.45}, {"month": "2025-02", "order_count": 9, "total_revenue": 13233.75, "total_cost": 9558.11, "avg_satisfaction": 3.78, "gross_profit": 3675.6399999999994, "margin_rate": 27.77}, {"month": "2025-03", "order_count": 7, "total_revenue": 20268.2, "total_cost": 15115.380000000001, "avg_satisfaction": 4.86, "gross_profit": 5152.82, "margin_rate": 25.42}, {"month": "2025-04", "order_count": 4, "total_revenue": 5197.04, "total_cost": 4009.46, "avg_satisfaction": 4.0, "gross_profit": 1187.58, "margin_rate": 22.85}, {"month": "2025-05", "order_count": 3, "total_revenue": 4527.48, "total_cost": 3237.35, "avg_satisfaction": 4.67, "gross_profit": 1290.1299999999997, "margin_rate": 28.5}], "mom": [{"month": "2024-01", "order_count": 11, "total_revenue": 16841.72, "total_cost": 12114.17, "avg_satisfaction": 4.0, "gross_profit": 4727.550000000001, "margin_rate": 28.07, "revenue_mom(%)": null, "order_mom(%)": null, "profit_mom(%)": null}, {"month": "2024-02", "order_count": 5, "total_revenue": 8226.22, "total_cost": 5975.9, "avg_satisfaction": 4.0, "gross_profit": 2250.3199999999997, "margin_rate": 27.36, "revenue_mom(%)": -51.16, "order_mom(%)": -54.55, "profit_mom(%)": -52.4}, {"month": "2024-03", "order_count": 6, "total_revenue": 10366.43, "total_cost": 7584.97, "avg_satisfaction": 4.17, "gross_profit": 2781.46, "margin_rate": 26.83, "revenue_mom(%)": 26.02, "order_mom(%)": 20.0, "profit_mom(%)": 23.6}, {"month": "2024-04", "order_count": 10, "total_revenue": 22568.41, "total_cost": 17073.91, "avg_satisfaction": 3.9, "gross_profit": 5494.5, "margin_rate": 24.35, "revenue_mom(%)": 117.71, "order_mom(%)": 66.67, "profit_mom(%)": 97.54}, {"month": "2024-05", "order_count": 15, "total_revenue": 22215.46, "total_cost": 16174.58, "avg_satisfaction": 3.67, "gross_profit": 6040.879999999999, "margin_rate": 27.19, "revenue_mom(%)": -1.56, "order_mom(%)": 50.0, "profit_mom(%)": 9.94}, {"month": "2024-06", "order_count": 5, "total_revenue": 7543.5599999999995, "total_cost": 5389.900000000001, "avg_satisfaction": 4.2, "gross_profit": 2153.659999999999, "margin_rate": 28.55, "revenue_mom(%)": -66.04, "order_mom(%)": -66.67, "profit_mom(%)": -64.35}, {"month": "2024-07", "order_count": 11, "total_revenue": 38852.48, "total_cost": 28112.54, "avg_satisfaction": 4.09, "gross_profit": 10739.940000000002, "margin_rate": 27.64, "revenue_mom(%)": 415.04, "order_mom(%)": 120.0, "profit_mom(%)": 398.68}, {"month": "2024-08", "order_count": 16, "total_revenue": 35673.93, "total_cost": 25229.68, "avg_satisfaction": 4.12, "gross_profit": 10444.25, "margin_rate": 29.28, "revenue_mom(%)": -8.18, "order_mom(%)": 45.45, "profit_mom(%)": -2.75}, {"month": "2024-09", "order_count": 6, "total_revenue": 23110.719999999998, "total_cost": 16632.9, "avg_satisfaction": 4.33, "gross_profit": 6477.819999999996, "margin_rate": 28.03, "revenue_mom(%)": -35.22, "order_mom(%)": -62.5, "profit_mom(%)": -37.98}, {"month": "2024-10", "order_count": 8, "total_revenue": 20142.1, "total_cost": 14690.52, "avg_satisfaction": 4.25, "gross_profit": 5451.579999999998, "margin_rate": 27.07, "revenue_mom(%)": -12.85, "order_mom(%)": 33.33, "profit_mom(%)": -15.84}, {"month": "2024-11", "order_count": 9, "total_revenue": 30306.38, "total_cost": 22120.670000000002, "avg_satisfaction": 3.44, "gross_profit": 8185.709999999999, "margin_rate": 27.01, "revenue_mom(%)": 50.46, "order_mom(%)": 12.5, "profit_mom(%)": 50.15}, {"month": "2024-12", "order_count": 17, "total_revenue": 35857.08, "total_cost": 25755.98, "avg_satisfaction": 3.94, "gross_profit": 10101.100000000002, "margin_rate": 28.17, "revenue_mom(%)": 18.32, "order_mom(%)": 88.89, "profit_mom(%)": 23.4}, {"month": "2025-01", "order_count": 8, "total_revenue": 13066.65, "total_cost": 9741.36, "avg_satisfaction": 3.0, "gross_profit": 3325.289999999999, "margin_rate": 25.45, "revenue_mom(%)": -63.56, "order_mom(%)": -52.94, "profit_mom(%)": -67.08}, {"month": "2025-02", "order_count": 9, "total_revenue": 13233.75, "total_cost": 9558.11, "avg_satisfaction": 3.78, "gross_profit": 3675.6399999999994, "margin_rate": 27.77, "revenue_mom(%)": 1.28, "order_mom(%)": 12.5, "profit_mom(%)": 10.54}, {"month": "2025-03", "order_count": 7, "total_revenue": 20268.2, "total_cost": 15115.380000000001, "avg_satisfaction": 4.86, "gross_profit": 5152.82, "margin_rate": 25.42, "revenue_mom(%)": 53.16, "order_mom(%)": -22.22, "profit_mom(%)": 40.19}, {"month": "2025-04", "order_count": 4, "total_revenue": 5197.04, "total_cost": 4009.46, "avg_satisfaction": 4.0, "gross_profit": 1187.58, "margin_rate": 22.85, "revenue_mom(%)": -74.36, "order_mom(%)": -42.86, "profit_mom(%)": -76.95}, {"month": "2025-05", "order_count": 3, "total_revenue": 4527.48, "total_cost": 3237.35, "avg_satisfaction": 4.67, "gross_profit": 1290.1299999999997, "margin_rate": 28.5, "revenue_mom(%)": -12.88, "order_mom(%)": -25.0, "profit_mom(%)": 8.64}], "products": [{"product_type": "整车运输", "order_count": 10, "total_revenue": 112844.31999999999, "total_cost": 83523.75, "avg_weight": 15599.220000000001, "revenue_share": 34.4, "gross_profit": 29320.569999999992, "margin_rate": 25.98}, {"product_type": "精准卡航", "order_count": 43, "total_revenue": 93186.63, "total_cost": 66956.72, "avg_weight": 264.90000000000003, "revenue_share": 28.41, "gross_profit": 26229.910000000003, "margin_rate": 28.15}, {"product_type": "精准汽运", "order_count": 38, "total_revenue": 63204.33, "total_cost": 46253.61, "avg_weight": 435.64210526315793, "revenue_share": 19.27, "gross_profit": 16950.72, "margin_rate": 26.82}, {"product_type": "仓储配送", "order_count": 17, "total_revenue": 33220.64, "total_cost": 23412.69, "avg_weight": 0.0, "revenue_share": 10.13, "gross_profit": 9807.95, "margin_rate": 29.52}, {"product_type": "大件快递", "order_count": 24, "total_revenue": 18250.93, "total_cost": 13148.59, "avg_weight": 42.90416666666667, "revenue_share": 5.56, "gross_profit": 5102.34, "margin_rate": 27.96}, {"product_type": "同城当日达", "order_count": 18, "total_revenue": 7290.76, "total_cost": 5222.02, "avg_weight": 13.216666666666667, "revenue_share": 2.22, "gross_profit": 2068.74, "margin_rate": 28.37}], "customers": [{"customer_type": "个人客户", "order_count": 58, "total_revenue": 149156.81, "total_cost": 109087.75, "avg_order_value": 2571.67, "avg_satisfaction": 4.05, "return_count": 1, "gross_profit": 40069.06, "margin_rate": 26.86, "return_rate(%)": 1.72}, {"customer_type": "企业客户", "order_count": 92, "total_revenue": 178840.8, "total_cost": 129429.63, "avg_order_value": 1943.92, "avg_satisfaction": 3.91, "return_count": 4, "gross_profit": 49411.169999999984, "margin_rate": 27.63, "return_rate(%)": 4.35}], "top_customers": [{"customer_name": "华为供应链", "customer_type": "企业客户", "order_count": 15, "total_revenue": 36718.75, "avg_satisfaction": 3.87}, {"customer_name": "美的物流", "customer_type": "企业客户", "order_count": 10, "total_revenue": 36103.71, "avg_satisfaction": 4.0}, {"customer_name": "陈师傅", "customer_type": "个人客户", "order_count": 9, "total_revenue": 33430.31, "avg_satisfaction": 4.56}, {"customer_name": "王商户", "customer_type": "个人客户", "order_count": 11, "total_revenue": 31391.16, "avg_satisfaction": 3.45}, {"customer_name": "张先生", "customer_type": "个人客户", "order_count": 12, "total_revenue": 28666.66, "avg_satisfaction": 4.42}, {"customer_name": "刘店主", "customer_type": "个人客户", "order_count": 12, "total_revenue": 28542.1, "avg_satisfaction": 3.92}, {"customer_name": "格力物流", "customer_type": "企业客户", "order_count": 12, "total_revenue": 28158.0, "avg_satisfaction": 3.42}, {"customer_name": "顺丰合作", "customer_type": "企业客户", "order_count": 16, "total_revenue": 24520.88, "avg_satisfaction": 4.19}, {"customer_name": "李女士", "customer_type": "个人客户", "order_count": 8, "total_revenue": 18918.57, "avg_satisfaction": 3.88}, {"customer_name": "京东仓配", "customer_type": "企业客户", "order_count": 11, "total_revenue": 18056.18, "avg_satisfaction": 4.0}], "sales": [{"sales_rep": "陈静", "order_count": 25, "total_revenue": 74148.69, "total_cost": 54272.44, "avg_satisfaction": 3.64, "customer_count": 11, "gross_profit": 19876.25, "margin_rate": 26.81}, {"sales_rep": "刘洋", "order_count": 19, "total_revenue": 54091.08, "total_cost": 39583.98, "avg_satisfaction": 4.0, "customer_count": 11, "gross_profit": 14507.099999999999, "margin_rate": 26.82}, {"sales_rep": "王强", "order_count": 20, "total_revenue": 50095.57, "total_cost": 36126.62, "avg_satisfaction": 3.7, "customer_count": 11, "gross_profit": 13968.949999999997, "margin_rate": 27.88}, {"sales_rep": "周杰", "order_count": 20, "total_revenue": 47120.15, "total_cost": 34473.03, "avg_satisfaction": 4.2, "customer_count": 12, "gross_profit": 12647.120000000003, "margin_rate": 26.84}, {"sales_rep": "孙婷", "order_count": 22, "total_revenue": 28897.52, "total_cost": 21646.11, "avg_satisfaction": 4.14, "customer_count": 11, "gross_profit": 7251.41, "margin_rate": 25.09}, {"sales_rep": "赵磊", "order_count": 15, "total_revenue": 27215.66, "total_cost": 19233.2, "avg_satisfaction": 3.93, "customer_count": 7, "gross_profit": 7982.459999999999, "margin_rate": 29.33}, {"sales_rep": "李娜", "order_count": 18, "total_revenue": 26771.06, "total_cost": 18728.6, "avg_satisfaction": 3.83, "customer_count": 11, "gross_profit": 8042.460000000003, "margin_rate": 30.04}, {"sales_rep": "张伟", "order_count": 11, "total_revenue": 19657.88, "total_cost": 14453.4, "avg_satisfaction": 4.64, "customer_count": 6, "gross_profit": 5204.480000000001, "margin_rate": 26.48}], "cities": [{"city": "长沙", "region": "华中", "total_revenue": 38777.7, "order_count": 6}, {"city": "厦门", "region": "华南", "total_revenue": 31137.5, "order_count": 12}, {"city": "成都", "region": "西南", "total_revenue": 24763.4, "order_count": 9}, {"city": "贵阳", "region": "西南", "total_revenue": 20319.8, "order_count": 5}, {"city": "南昌", "region": "华中", "total_revenue": 19008.96, "order_count": 7}, {"city": "昆明", "region": "西南", "total_revenue": 18275.12, "order_count": 6}, {"city": "郑州", "region": "华中", "total_revenue": 18040.43, "order_count": 8}, {"city": "武汉", "region": "华中", "total_revenue": 17624.92, "order_count": 5}, {"city": "南京", "region": "华东", "total_revenue": 17492.6, "order_count": 10}, {"city": "拉萨", "region": "西南", "total_revenue": 15379.18, "order_count": 7}], "alerts": [{"level": "warning", "category": "客户满意度", "message": "区域 [华中] 平均满意度 3.9 低于标准 4.0", "region": "华中", "value": 3.93}, {"level": "warning", "category": "客户满意度", "message": "区域 [华南] 平均满意度 3.9 低于标准 4.0", "region": "华南", "value": 3.89}, {"level": "warning", "category": "客户满意度", "message": "区域 [西南] 平均满意度 3.9 低于标准 4.0", "region": "西南", "value": 3.91}, {"level": "danger", "category": "时效", "message": "共 39 单超时（>3天），占比 26.0%", "region": "全局", "value": 26.0}, {"level": "danger", "category": "营收趋势", "message": "最新月份 [2025-05] 营收环比下降 12.88%", "region": "全局", "value": -12.88}, {"level": "danger", "category": "目标追踪", "message": "[2025-05] 总营收(元) 完成率 9.1%，落后目标（差 45472.52）", "region": "全局", "value": 9.1}, {"level": "danger", "category": "目标追踪", "message": "[2025-05] 总单量 完成率 15.0%，落后目标（差 17.0）", "region": "全局", "value": 15.0}, {"level": "danger", "category": "目标追踪", "message": "[2025-05] 客诉率(%) 完成率 21.4%，落后目标（差 11.0）", "region": "全局", "value": 21.4}], "goals": [{"name": "总营收(元)", "target": 50000.0, "actual": 4527.48, "progress_pct": 9.1, "gap": 45472.52, "status": "behind", "status_label": "落后", "period": "2025-05"}, {"name": "总单量", "target": 20.0, "actual": 3.0, "progress_pct": 15.0, "gap": 17.0, "status": "behind", "status_label": "落后", "period": "2025-05"}, {"name": "毛利率(%)", "target": 28.0, "actual": 27.28, "progress_pct": 97.4, "gap": 0.72, "status": "on_track", "status_label": "正常", "period": "2025-05"}, {"name": "准时率(%)", "target": 75.0, "actual": 74.0, "progress_pct": 98.7, "gap": 1.0, "status": "on_track", "status_label": "正常", "period": "2025-05"}, {"name": "平均满意度", "target": 4.2, "actual": 3.97, "progress_pct": 94.5, "gap": 0.23, "status": "on_track", "status_label": "正常", "period": "2025-05"}, {"name": "单公斤营收(元)", "target": 1.5, "actual": 1.5, "progress_pct": 99.7, "gap": 0.0, "status": "on_track", "status_label": "正常", "period": "2025-05"}, {"name": "客诉率(%)", "target": 3.0, "actual": 14.0, "progress_pct": 21.4, "gap": 11.0, "status": "behind", "status_label": "落后", "period": "2025-05"}], "goal_summary": {"total": 7, "achieved": 0, "on_track": 4, "at_risk": 0, "behind": 3, "avg_progress": 62.3}, "goal_period": "2025-05", "diagnosis": {"score": 24, "summary": "综合评分 24/100（存在较大经营风险，需立即干预）。当前毛利 8.9万，识别 10 项风险、5 条可执行建议。优先处理「高/紧急」动作，直接作用于增收降本。", "highlights": ["整体毛利率 27.28%，高于基准 25.0%，盈利模型健康", "华中区营收最高（9.8万），可作为标杆复制经验", "TOP 客户（A类）贡献营收 75.5%，华为供应链、美的物流、陈师傅 等需重点维护"], "risks": ["单公斤营收 1.496 元，低于基准 1.5 元，每吨少赚约 4 元", "最新月 [2025-05] 营收环比下降 12.88%，需紧急排查", "准时率 74.0% 偏低，超时直接影响客户复购和企业客户合同续签", "客户满意度 3.97 分，低于 4.0 及格线，存在客户流失和客诉风险", "目标「总营收(元)」完成率仅 9.1%（2025-05）", "目标「总单量」完成率仅 15.0%（2025-05）", "目标「客诉率(%)」完成率仅 21.4%（2025-05）", "[2025-05] 总营收(元) 完成率 9.1%，落后目标（差 45472.52）"], "opportunities": ["当前单公斤毛利 0.408 元，若货量增长 10%，可直接增加毛利 8948元", "「仓储配送」毛利率最高（29.52%），可加大销售激励"], "actions": [{"priority": "紧急", "area": "营收趋势", "action": "立即召开区域经营复盘：分解单量下降是流失客户还是单价下降，制定挽回方案", "expected_impact": "阻止营收下滑趋势，稳住基本盘"}, {"priority": "高", "area": "单公斤营收", "action": "对单公斤营收低于 1.5 元的区域/产品做重泡比优化和报价复核，重点推「精准卡航」等高毛利产品", "expected_impact": "单公斤营收提升 0.1-0.2 元，对应增收约 877元"}, {"priority": "高", "area": "客户经营", "action": "对 A 类客户（华为供应链、美的物流、陈师傅）制定专属服务方案和年度合同续签计划，防止流失", "expected_impact": "保住 A 类客户即保住约 24.8万 营收"}, {"priority": "高", "area": "时效提升", "action": "梳理超时率最高的 3 条线路，优化班次衔接；对超时订单做根因分析（提货/干线/派送）", "expected_impact": "准时率每提升 5%，客户满意度提升约 0.2 分，减少流失"}, {"priority": "中", "area": "客户体验", "action": "对满意度 ≤3 分的客户做回访，重点解决破损/延误/服务态度问题", "expected_impact": "降低退单和客诉率，保护营收"}]}, "customer_abc": [{"customer_name": "华为供应链", "customer_type": "企业客户", "order_count": 15, "total_revenue": 36718.75, "total_cost": 25853.309999999998, "avg_satisfaction": 3.87, "revenue_share": 11.19, "cum_share": 11.19, "gross_profit": 10865.440000000002, "margin_rate": 29.59, "abc_class": "A"}, {"customer_name": "美的物流", "customer_type": "企业客户", "order_count": 10, "total_revenue": 36103.71, "total_cost": 27002.37, "avg_satisfaction": 4.0, "revenue_share": 11.01, "cum_share": 22.2, "gross_profit": 9101.34, "margin_rate": 25.21, "abc_class": "A"}, {"customer_name": "陈师傅", "customer_type": "个人客户", "order_count": 9, "total_revenue": 33430.31, "total_cost": 25213.18, "avg_satisfaction": 4.56, "revenue_share": 10.19, "cum_share": 32.39, "gross_profit": 8217.129999999997, "margin_rate": 24.58, "abc_class": "A"}, {"customer_name": "王商户", "customer_type": "个人客户", "order_count": 11, "total_revenue": 31391.16, "total_cost": 21877.43, "avg_satisfaction": 3.45, "revenue_share": 9.57, "cum_share": 41.96, "gross_profit": 9513.73, "margin_rate": 30.31, "abc_class": "A"}, {"customer_name": "张先生", "customer_type": "个人客户", "order_count": 12, "total_revenue": 28666.66, "total_cost": 21800.96, "avg_satisfaction": 4.42, "revenue_share": 8.74, "cum_share": 50.7, "gross_profit": 6865.700000000001, "margin_rate": 23.95, "abc_class": "A"}, {"customer_name": "刘店主", "customer_type": "个人客户", "order_count": 12, "total_revenue": 28542.100000000002, "total_cost": 20884.37, "avg_satisfaction": 3.92, "revenue_share": 8.7, "cum_share": 59.400000000000006, "gross_profit": 7657.730000000003, "margin_rate": 26.83, "abc_class": "A"}, {"customer_name": "格力物流", "customer_type": "企业客户", "order_count": 12, "total_revenue": 28158.0, "total_cost": 20437.46, "avg_satisfaction": 3.42, "revenue_share": 8.58, "cum_share": 67.98, "gross_profit": 7720.540000000001, "margin_rate": 27.42, "abc_class": "A"}, {"customer_name": "顺丰合作", "customer_type": "企业客户", "order_count": 16, "total_revenue": 24520.88, "total_cost": 17848.78, "avg_satisfaction": 4.19, "revenue_share": 7.48, "cum_share": 75.46000000000001, "gross_profit": 6672.100000000002, "margin_rate": 27.21, "abc_class": "A"}, {"customer_name": "李女士", "customer_type": "个人客户", "order_count": 8, "total_revenue": 18918.57, "total_cost": 13343.88, "avg_satisfaction": 3.88, "revenue_share": 5.77, "cum_share": 81.23, "gross_profit": 5574.6900000000005, "margin_rate": 29.47, "abc_class": "B"}, {"customer_name": "京东仓配", "customer_type": "企业客户", "order_count": 11, "total_revenue": 18056.18, "total_cost": 13250.25, "avg_satisfaction": 4.0, "revenue_share": 5.5, "cum_share": 86.73, "gross_profit": 4805.93, "margin_rate": 26.62, "abc_class": "B"}, {"customer_name": "海尔智家", "customer_type": "企业客户", "order_count": 13, "total_revenue": 18020.84, "total_cost": 12764.6, "avg_satisfaction": 3.31, "revenue_share": 5.49, "cum_share": 92.22, "gross_profit": 5256.24, "margin_rate": 29.17, "abc_class": "B"}, {"customer_name": "宁德时代", "customer_type": "企业客户", "order_count": 6, "total_revenue": 10216.57, "total_cost": 7428.72, "avg_satisfaction": 4.83, "revenue_share": 3.11, "cum_share": 95.33, "gross_profit": 2787.8499999999995, "margin_rate": 27.29, "abc_class": "C"}, {"customer_name": "赵老板", "customer_type": "个人客户", "order_count": 6, "total_revenue": 8208.01, "total_cost": 5967.93, "avg_satisfaction": 4.17, "revenue_share": 2.5, "cum_share": 97.83, "gross_profit": 2240.08, "margin_rate": 27.29, "abc_class": "C"}, {"customer_name": "比亚迪部件", "customer_type": "企业客户", "order_count": 9, "total_revenue": 7045.87, "total_cost": 4844.14, "avg_satisfaction": 4.22, "revenue_share": 2.15, "cum_share": 99.98, "gross_profit": 2201.7299999999996, "margin_rate": 31.25, "abc_class": "C"}], "distance_mix": [{"distance_type": "跨省", "order_count": 61, "total_revenue": 174342.47, "total_cost": 126687.35, "revenue_share": 53.15, "gross_profit": 47655.119999999995, "margin_rate": 27.33, "total_weight": 163091.2, "revenue_per_kg": 1.069}, {"distance_type": "省内", "order_count": 57, "total_revenue": 97299.87, "total_cost": 70726.49, "revenue_share": 29.66, "gross_profit": 26573.37999999999, "margin_rate": 27.31, "total_weight": 35158.7, "revenue_per_kg": 2.767}, {"distance_type": "同城", "order_count": 32, "total_revenue": 56355.27, "total_cost": 41103.54, "revenue_share": 17.18, "gross_profit": 15251.729999999996, "margin_rate": 27.06, "total_weight": 20982.2, "revenue_per_kg": 2.686}], "unit_economics": [{"region": "华北", "total_revenue": 33173.3, "total_cost": 23554.4, "total_weight": 4789.2, "order_count": 23, "gross_profit": 9618.900000000001, "margin_rate": 29.0, "revenue_per_kg": 6.927, "profit_per_kg": 2.008}, {"region": "华东", "total_revenue": 44573.840000000004, "total_cost": 32494.64, "total_weight": 8742.2, "order_count": 29, "gross_profit": 12079.200000000004, "margin_rate": 27.1, "revenue_per_kg": 5.099, "profit_per_kg": 1.382}, {"region": "华南", "total_revenue": 68844.94, "total_cost": 50194.53, "total_weight": 21997.9, "order_count": 35, "gross_profit": 18650.410000000003, "margin_rate": 27.09, "revenue_per_kg": 3.13, "profit_per_kg": 0.848}, {"region": "西南", "total_revenue": 83439.89, "total_cost": 61511.1, "total_weight": 60376.9, "order_count": 33, "gross_profit": 21928.79, "margin_rate": 26.28, "revenue_per_kg": 1.382, "profit_per_kg": 0.363}, {"region": "华中", "total_revenue": 97965.64, "total_cost": 70762.71, "total_weight": 123325.9, "order_count": 30, "gross_profit": 27202.929999999993, "margin_rate": 27.77, "revenue_per_kg": 0.794, "profit_per_kg": 0.221}]};</script>
 <script>
 const REFRESH_SEC = 60;
 let charts = {};
@@ -163,20 +185,42 @@ function renderKPI(metrics) {
   });
 }
 
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
 function initCharts() {
-  ['regionChart','productChart','trendChart','customerChart','gaugeMargin','gaugeOnTime'].forEach(id => {
+  if (typeof echarts === 'undefined') {
+    showError('ECharts 加载失败，请检查网络连接后刷新页面');
+    return false;
+  }
+  ['regionChart','productChart','trendChart','customerChart','gaugeMargin','gaugeOnTime','goalChart'].forEach(id => {
     const el = document.getElementById(id);
     if (el) charts[id] = echarts.init(el, null, {renderer:'canvas'});
   });
-  window.addEventListener('resize', () => Object.values(charts).forEach(c => c.resize()));
+  window.addEventListener('resize', () => Object.values(charts).forEach(c => c && c.resize()));
+  return true;
+}
+
+function resizeCharts() {
+  setTimeout(() => Object.values(charts).forEach(c => c && c.resize()), 100);
 }
 
 function renderDashboard(data) {
+  if (!data || !data.metrics) {
+    showError('数据格式错误');
+    return;
+  }
+  document.getElementById('errorBanner').style.display = 'none';
   document.getElementById('updateTime').textContent = '更新: ' + data.updated_at;
 
   renderKPI(data.metrics);
+  renderGoals(data.goals || [], data.goal_period || '');
+  renderDiagnosis(data.diagnosis || {});
 
-  // 区域柱状图
+  if (!charts.regionChart) return;
   const regions = data.regions || [];
   charts.regionChart.setOption({
     tooltip: {trigger:'axis'},
@@ -246,38 +290,95 @@ function renderDashboard(data) {
   charts.gaugeMargin.setOption(gaugeOpt(margin,'毛利率','#0096ff'));
   charts.gaugeOnTime.setOption(gaugeOpt(onTime,'准时率','#00c864'));
 
-  // 预警
+  // 目标进度横向图
+  const goals = data.goals || [];
+  if (charts.goalChart && goals.length > 0) {
+    const colors = {achieved:'#00c864',on_track:'#0096ff',at_risk:'#ffb400',behind:'#ff5050'};
+    charts.goalChart.setOption({
+      tooltip:{trigger:'axis',formatter:p=>`${p[0].name}: ${p[0].value}%`},
+      grid:{left:90,right:40,bottom:10,top:10},
+      xAxis:{type:'value',max:100,axisLabel:{color:'#7eb8da',formatter:'{value}%'}},
+      yAxis:{type:'category',data:goals.map(g=>g.name).reverse(),axisLabel:{color:'#7eb8da',fontSize:10}},
+      series:[{type:'bar',data:goals.map(g=>({value:Math.min(g.progress_pct,100),itemStyle:{color:colors[g.status]||'#0096ff'}})).reverse(),
+        barWidth:14,label:{show:true,position:'right',formatter:p=>p.value+'%',color:'#b0cce0',fontSize:10}
+      }]
+    });
+  }
+
+  // 预警 + 行动建议
   const alerts = data.alerts || [];
+  const actions = (data.diagnosis || {}).actions || [];
   const alertEl = document.getElementById('alertList');
-  if (alerts.length === 0) {
+  let items = '';
+  if (actions.length) {
+    items += actions.slice(0,5).map(a => `<div class="alert-item warn">[${a.priority}][${a.area}] ${a.action}</div>`).join('');
+  }
+  if (alerts.length === 0 && !items) {
     alertEl.innerHTML = '<div class="alert-item ok">所有指标正常，暂无预警</div>';
   } else {
-    const items = alerts.map(a => `<div class="alert-item ${a.level==='danger'?'':'warn'}">[${a.category}] ${a.message}</div>`).join('');
+    if (!items) items = alerts.map(a => `<div class="alert-item ${a.level==='danger'?'':'warn'}">[${a.category}] ${a.message}</div>`).join('');
+    else items += alerts.map(a => `<div class="alert-item ${a.level==='danger'?'':'warn'}">[${a.category}] ${a.message}</div>`).join('');
     alertEl.innerHTML = items + items;
   }
 
-  // 销售排名
-  const sales = (data.sales || []).slice(0, 5);
-  const rankEl = document.getElementById('salesRank');
-  rankEl.innerHTML = '<table class="rank-table"><tr><th>排名</th><th>销售员</th><th>营收</th><th>毛利率</th></tr>' +
-    sales.map((s,i) => `<tr><td><span class="rank-num rank-${i<3?i+1:'n'}">${i+1}</span></td><td>${s.sales_rep}</td><td>${(s.total_revenue/10000).toFixed(1)}万</td><td>${s.margin_rate}%</td></tr>`).join('') +
-    '</table>';
+  resizeCharts();
+}
+
+function renderDiagnosis(diag) {
+  const el = document.getElementById('diagScore');
+  if (!diag || !diag.score) { el.textContent = ''; return; }
+  el.textContent = '评分 ' + diag.score + '/100';
+}
+
+function renderGoals(goals, period) {
+  const el = document.getElementById('goalList');
+  if (!goals.length) {
+    el.innerHTML = '<div style="color:#6a8aaa;font-size:12px;padding:10px">未配置经营目标，请编辑 config/settings.yaml</div>';
+    return;
+  }
+  const colors = {achieved:'#00c864',on_track:'#0096ff',at_risk:'#ffb400',behind:'#ff5050'};
+  el.innerHTML = (period ? `<div style="font-size:11px;color:#6a8aaa;margin-bottom:8px">统计周期: ${period}</div>` : '') +
+    goals.map(g => `
+    <div class="goal-item">
+      <div class="goal-header">
+        <span class="goal-name">${g.name}</span>
+        <span class="goal-status ${g.status}">${g.status_label} ${g.progress_pct}%</span>
+      </div>
+      <div class="goal-bar"><div class="goal-bar-fill" style="width:${Math.min(g.progress_pct,100)}%;background:${colors[g.status]||'#0096ff'}"></div></div>
+      <div class="goal-detail">实际 ${g.actual} / 目标 ${g.target}</div>
+    </div>`).join('');
 }
 
 async function loadData() {
-  try {
-    const resp = await fetch('data.json?t=' + Date.now());
-    const data = await resp.json();
-    renderDashboard(data);
-  } catch(e) {
-    document.getElementById('updateTime').textContent = '数据加载失败，请运行 python main.py';
-    console.error(e);
+  // 优先使用 HTML 内嵌数据（支持直接双击打开）
+  if (window.__DASHBOARD_DATA__) {
+    renderDashboard(window.__DASHBOARD_DATA__);
+  }
+
+  // 通过 Web 服务运行时，拉取最新数据
+  if (location.protocol === 'file:') return;
+
+  for (const url of ['/api/data', 'data.json']) {
+    try {
+      const resp = await fetch(url + '?t=' + Date.now());
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      renderDashboard(data);
+      return;
+    } catch(e) {
+      console.warn('加载失败:', url, e);
+    }
+  }
+
+  if (!window.__DASHBOARD_DATA__) {
+    showError('数据加载失败，请先运行: python main.py');
   }
 }
 
-initCharts();
-loadData();
-setInterval(loadData, REFRESH_SEC * 1000);
+window.addEventListener('DOMContentLoaded', () => {
+  if (initCharts()) loadData();
+  setInterval(loadData, REFRESH_SEC * 1000);
+});
 </script>
 </body>
 </html>

@@ -84,6 +84,29 @@ def check_revenue_decline(mom: pd.DataFrame) -> List[dict]:
     return alerts
 
 
+def check_goal_alerts(goals: List[dict]) -> List[dict]:
+    """经营目标落后预警"""
+    alerts = []
+    for g in goals:
+        if g["status"] == "behind":
+            alerts.append({
+                "level": "danger",
+                "category": "目标追踪",
+                "message": f"[{g['period']}] {g['name']} 完成率 {g['progress_pct']}%，落后目标（差 {g['gap']}）",
+                "region": "全局",
+                "value": g["progress_pct"],
+            })
+        elif g["status"] == "at_risk":
+            alerts.append({
+                "level": "warning",
+                "category": "目标追踪",
+                "message": f"[{g['period']}] {g['name']} 完成率 {g['progress_pct']}%，存在达标风险",
+                "region": "全局",
+                "value": g["progress_pct"],
+            })
+    return alerts
+
+
 def run_all_alerts(
     df: pd.DataFrame,
     region_summary: pd.DataFrame,

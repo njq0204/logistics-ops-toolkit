@@ -1,6 +1,7 @@
 """Flask Web 服务 — 大屏展示 + API + 自动触发分析"""
 
 import json
+import re
 import sys
 import threading
 from datetime import datetime
@@ -24,6 +25,15 @@ DATA_PATH = ROOT / _config.get("data", {}).get("default_input", "data/sample/ord
 
 _last_result = None
 _is_running = False
+
+
+def _load_json_file(path: Path) -> dict:
+    """读取 JSON 文件，兼容旧版 NaN 写法"""
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(r"\bNaN\b", "null", text)
+    text = re.sub(r"\bInfinity\b", "null", text)
+    text = re.sub(r"-Infinity", "null", text)
+    return json.loads(text)
 
 
 def _run_pipeline():
@@ -53,8 +63,22 @@ def index():
 def data_json():
     json_path = DASHBOARD_DIR / "data.json"
     if json_path.exists():
-        return send_from_directory(DASHBOARD_DIR, "data.json")
+        from dashboard_generator import _sanitize_for_json
+        data = _sanitize_for_json(_load_json_file(json_path))
+        return jsonify(data)
     return jsonify({"error": "no data, run analysis first"}), 404
+
+
+@app.route("/api/data")
+def api_data():
+    json_path = DASHBOARD_DIR / "data.json"
+    if json_path.exists():
+        from dashboard_generator import _sanitize_for_json
+        return jsonify(_sanitize_for_json(_load_json_file(json_path)))
+    if _last_result:
+        from dashboard_generator import _sanitize_for_json
+        return jsonify(_sanitize_for_json(result_to_api_dict(_last_result)))
+    return jsonify({"error": "no data"}), 404
 
 
 @app.route("/api/status")
@@ -65,16 +89,6 @@ def api_status():
         "data_path": str(DATA_PATH),
         "dashboard_ready": (DASHBOARD_DIR / "index.html").exists(),
     })
-
-
-@app.route("/api/data")
-def api_data():
-    json_path = DASHBOARD_DIR / "data.json"
-    if json_path.exists():
-        return jsonify(json.loads(json_path.read_text(encoding="utf-8")))
-    if _last_result:
-        return jsonify(result_to_api_dict(_last_result))
-    return jsonify({"error": "no data"}), 404
 
 
 @app.route("/api/refresh", methods=["POST"])

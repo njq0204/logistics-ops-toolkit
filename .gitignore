@@ -23,6 +23,8 @@ Thumbs.db
 output/*
 !output/README.md
 !output/.gitkeep
+output/logs/*
+!output/logs/.gitkeep
 !output/charts/
 output/charts/*
 !output/charts/.gitkeep

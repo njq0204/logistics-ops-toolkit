@@ -14,6 +14,7 @@ REQUIRED_COLUMNS = [
 OPTIONAL_COLUMNS = [
     "city", "customer_name", "sales_rep",
     "delivery_days", "satisfaction", "is_return",
+    "billing_weight_kg", "distance_type", "is_complaint",
 ]
 
 
@@ -61,9 +62,19 @@ def preprocess_orders(df: pd.DataFrame) -> pd.DataFrame:
     df["cost"] = pd.to_numeric(df["cost"], errors="coerce")
     df["weight_kg"] = pd.to_numeric(df["weight_kg"], errors="coerce").fillna(0)
 
-    for col in ["delivery_days", "satisfaction", "is_return"]:
+    for col in ["delivery_days", "satisfaction", "is_return", "is_complaint", "billing_weight_kg"]:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    if "billing_weight_kg" not in df.columns:
+        df["billing_weight_kg"] = df["weight_kg"]
+    else:
+        df["billing_weight_kg"] = df["billing_weight_kg"].fillna(df["weight_kg"])
+
+    if "distance_type" not in df.columns:
+        df["distance_type"] = "跨省"
+    if "is_complaint" not in df.columns:
+        df["is_complaint"] = 0
 
     if "city" not in df.columns:
         df["city"] = "未知"

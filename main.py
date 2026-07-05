@@ -86,6 +86,40 @@ def main() -> None:
     else:
         print("  所有指标正常，暂无预警")
 
+    if result.goals:
+        print_section(f"经营目标追踪 ({result.goal_period or '当期'})")
+        for g in result.goals:
+            bar = "#" * int(min(g["progress_pct"], 100) / 5) + "-" * (20 - int(min(g["progress_pct"], 100) / 5))
+            print(f"  [{g['status_label']:4s}] {g['name']}: {g['actual']}/{g['target']} ({g['progress_pct']}%) [{bar}]")
+        s = result.goal_summary
+        print(f"  汇总: 共{s['total']}项 | 达标{s['achieved']} | 正常{s['on_track']} | 风险{s['at_risk']} | 落后{s['behind']} | 均值{s['avg_progress']}%")
+
+    if result.notify_result and not result.notify_result.get("skipped"):
+        print_section("预警通知")
+        for ch in result.notify_result.get("channels", []):
+            status = "OK" if ch.get("ok") else "FAIL"
+            print(f"  [{status}] {ch.get('channel', '?')}: {ch.get('path') or ch.get('response') or ch.get('error', '')}")
+    elif result.notify_result and result.notify_result.get("skipped"):
+        print(f"\n[通知] 跳过: {result.notify_result.get('reason')}")
+
+    if result.diagnosis:
+        d = result.diagnosis
+        print_section(f"经营诊断 (评分 {d.get('score', '-')}/100)")
+        print(f"  {d.get('summary', '')}")
+        if d.get("highlights"):
+            print("  [亮点]")
+            for h in d["highlights"][:3]:
+                print(f"    + {h}")
+        if d.get("risks"):
+            print("  [风险]")
+            for r in d["risks"][:3]:
+                print(f"    - {r}")
+        if d.get("actions"):
+            print("  [行动建议 — 优先执行]")
+            for a in d["actions"][:5]:
+                print(f"    [{a.get('priority','')}] {a.get('action','')}")
+                print(f"         -> {a.get('expected_impact','')}")
+
     if result.chart_paths:
         print_section("可视化图表")
         for cp in result.chart_paths:

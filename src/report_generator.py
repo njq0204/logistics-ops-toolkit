@@ -30,6 +30,7 @@ def generate_html_report(
     mom: pd.DataFrame,
     alerts: List[dict],
     chart_paths: List[Path],
+    diagnosis: dict = None,
 ) -> Path:
     """生成完整的 HTML 经营分析报告"""
     output_path = Path(output_path)
@@ -52,6 +53,23 @@ def generate_html_report(
     kpi_cards = ""
     for k, v in metrics.items():
         kpi_cards += f'<div class="kpi-card"><div class="kpi-value">{v}</div><div class="kpi-label">{k}</div></div>\n'
+
+    diagnosis = diagnosis or {}
+    diag_html = ""
+    if diagnosis:
+        diag_html = f'<p style="margin-bottom:12px;font-size:15px"><strong>综合评分 {diagnosis.get("score","-")}/100</strong> — {diagnosis.get("summary","")}</p>'
+        for title, key, color in [("经营亮点", "highlights", "#00AA66"), ("风险预警", "risks", "#e74c3c"), ("增长机会", "opportunities", "#0066CC")]:
+            items = diagnosis.get(key, [])
+            if items:
+                diag_html += f'<h3 style="color:{color};margin:12px 0 8px">{title}</h3><ul>'
+                diag_html += "".join(f'<li style="margin:4px 0">{i}</li>' for i in items)
+                diag_html += '</ul>'
+        actions = diagnosis.get("actions", [])
+        if actions:
+            diag_html += '<h3 style="color:#FF6600;margin:12px 0 8px">行动建议（优先赚钱）</h3><table class="data-table"><tr><th>优先级</th><th>领域</th><th>建议</th><th>预期效果</th></tr>'
+            for a in actions:
+                diag_html += f'<tr><td>{a.get("priority","")}</td><td>{a.get("area","")}</td><td>{a.get("action","")}</td><td>{a.get("expected_impact","")}</td></tr>'
+            diag_html += '</table>'
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -104,6 +122,11 @@ def generate_html_report(
   <div class="section">
     <h2>核心 KPI</h2>
     <div class="kpi-grid">{kpi_cards}</div>
+  </div>
+
+  <div class="section">
+    <h2>经营诊断 & 行动建议</h2>
+    {diag_html if diag_html else '<p>暂无诊断</p>'}
   </div>
 
   <div class="section">

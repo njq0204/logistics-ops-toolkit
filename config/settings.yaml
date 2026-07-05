@@ -2,7 +2,7 @@
 
 project:
   name: "物流经营数据分析平台"
-  version: "3.0.0"
+  version: "3.2.0"
   author: "德邦经营方向 · 海豚生"
 
 data:
@@ -15,6 +15,13 @@ analysis:
   margin_warning_threshold: 20.0
   delivery_sla_days: 3
   satisfaction_pass_score: 4.0
+
+# 经营基准线（诊断对比用）
+benchmarks:
+  revenue_per_kg: 1.5           # 单公斤营收基准(元)
+  margin_rate: 25.0             # 毛利率基准(%)
+  on_time_rate: 75.0            # 准时率基准(%)
+  complaint_rate: 3.0           # 客诉率上限(%)
 
 output:
   dir: "output"
@@ -29,11 +36,47 @@ dashboard:
   web_port: 8080
 
 automation:
-  schedule_interval_minutes: 30     # 默认定时分析间隔
-  watch_poll_seconds: 5             # 文件监听轮询间隔
+  schedule_interval_minutes: 30
+  watch_poll_seconds: 5
+
+excel:
+  include_raw_data: true          # 是否导出运单明细 Sheet
+  max_raw_rows: 500               # 明细最大行数
 
 visual:
   primary_color: "#0066CC"
   secondary_color: "#FF9900"
   accent_color: "#00AA66"
   dpi: 150
+
+# 经营目标（最新月份数据 vs 目标值）
+goals:
+  period_label: "当月"
+  targets:
+    总营收(元): 50000        # 月营收目标 5 万
+    总单量: 20                # 月单量目标
+    毛利率(%): 28.0          # 毛利率目标
+    准时率(%): 75.0          # 准时率目标
+    平均满意度: 4.2
+    单公斤营收(元): 1.5        # 零担核心定价指标
+    客诉率(%): 3.0              # 越低越好，完成率=实际/目标*100 时反向处理见 goal_tracker
+
+# 预警通知（默认仅写本地日志，按需开启）
+notifications:
+  enabled: true
+  min_level: "warning"        # 通知最低级别: warning / danger
+  cooldown_minutes: 60        # 同类预警冷却时间，避免重复推送
+  log:
+    enabled: true
+    path: "logs/notifications.log"
+  channels:
+    webhook:
+      enabled: false
+      url: ""                 # 企业微信机器人 Webhook 地址
+    email:
+      enabled: false
+      smtp_host: "smtp.qq.com"
+      smtp_port: 465
+      sender: ""              # 发件邮箱
+      password: ""            # 邮箱授权码（建议用环境变量 NOTIFY_EMAIL_PASSWORD）
+      receivers: []           # 收件人列表

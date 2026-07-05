@@ -34,6 +34,22 @@ def calc_efficiency_metrics(df: pd.DataFrame) -> dict:
     if "is_return" in df.columns:
         metrics["退单率(%)"] = round(df["is_return"].sum() / order_count * 100, 2)
 
+    # 德邦经营核心：单公斤 economics
+    bill_weight = df["billing_weight_kg"] if "billing_weight_kg" in df.columns else df["weight_kg"]
+    total_bill_weight = bill_weight.sum()
+    if total_bill_weight > 0:
+        metrics["总计费重量(kg)"] = round(total_bill_weight, 2)
+        metrics["单公斤营收(元)"] = round(total_revenue / total_bill_weight, 3)
+        metrics["单公斤成本(元)"] = round(total_cost / total_bill_weight, 3)
+        metrics["单公斤毛利(元)"] = round(gross_profit / total_bill_weight, 3)
+
+    if "is_complaint" in df.columns:
+        metrics["客诉率(%)"] = round(df["is_complaint"].sum() / order_count * 100, 2)
+
+    if "distance_type" in df.columns:
+        cross_share = (df["distance_type"] == "跨省").sum() / order_count * 100
+        metrics["跨省占比(%)"] = round(cross_share, 2)
+
     return metrics
 
 
@@ -216,3 +232,80 @@ def calc_city_ranking(df: pd.DataFrame, top_n: int = 10) -> pd.DataFrame:
     )
     city["total_revenue"] = city["total_revenue"].round(2)
     return city
+
+
+def calc_customer_abc(df: pd.DataFrame) -> pd.DataFrame:
+    """ABC 客户分类 — A类贡献80%营收，B类15%，C类5%"""
+    cust = (
+        df.groupby(["customer_name", "customer_type"])
+        .agg(
+            order_count=("order_id", "count"),
+            total_revenue=("revenue", "sum"),
+            total_cost=("cost", "sum"),
+            avg_satisfaction=("satisfaction", "mean"),
+        )
+        .reset_index()
+        .sort_values("total_revenue", ascending=False)
+    )
+    total_rev = cust["total_revenue"].sum()
+    cust["revenue_share"] = (cust["total_revenue"] / total_rev * 100).round(2)
+    cust["cum_share"] = cust["revenue_share"].cumsum()
+    cust["gross_profit"] = cust["total_revenue"] - cust["total_cost"]
+    cust["margin_rate"] = (cust["gross_profit"] / cust["total_revenue"] * 100).round(2)
+
+    def _abc(cum):
+        if cum <= 80:
+            return "A"
+        if cum <= 95:
+            return "B"
+        return "C"
+
+    cust["abc_class"] = cust["cum_share"].apply(_abc)
+    cust["avg_satisfaction"] = cust["avg_satisfaction"].round(2)
+    return cust
+
+
+def calc_distance_mix(df: pd.DataFrame) -> pd.DataFrame:
+    """同城/省内/跨省 业务结构"""
+    if "distance_type" not in df.columns:
+        return pd.DataFrame()
+    mix = (
+        df.groupby("distance_type")
+        .agg(
+            order_count=("order_id", "count"),
+            total_revenue=("revenue", "sum"),
+            total_cost=("cost", "sum"),
+        )
+        .reset_index()
+    )
+    total = mix["total_revenue"].sum()
+    mix["revenue_share"] = (mix["total_revenue"] / total * 100).round(2)
+    mix["gross_profit"] = mix["total_revenue"] - mix["total_cost"]
+    mix["margin_rate"] = (mix["gross_profit"] / mix["total_revenue"] * 100).round(2)
+    bill_col = "billing_weight_kg" if "billing_weight_kg" in df.columns else "weight_kg"
+    bill = df.groupby("distance_type")[bill_col].sum().reset_index(name="total_weight")
+    mix = mix.merge(bill, on="distance_type", how="left")
+    mix["revenue_per_kg"] = (mix["total_revenue"] / mix["total_weight"].replace(0, 1)).round(3)
+    return mix.sort_values("total_revenue", ascending=False)
+
+
+def calc_unit_economics_by_region(df: pd.DataFrame) -> pd.DataFrame:
+    """各区域单公斤 economics — 零担经营核心"""
+    bill = df["billing_weight_kg"] if "billing_weight_kg" in df.columns else df["weight_kg"]
+    tmp = df.copy()
+    tmp["_bill"] = bill
+    econ = (
+        tmp.groupby("region")
+        .agg(
+            total_revenue=("revenue", "sum"),
+            total_cost=("cost", "sum"),
+            total_weight=("_bill", "sum"),
+            order_count=("order_id", "count"),
+        )
+        .reset_index()
+    )
+    econ["gross_profit"] = econ["total_revenue"] - econ["total_cost"]
+    econ["margin_rate"] = (econ["gross_profit"] / econ["total_revenue"] * 100).round(2)
+    econ["revenue_per_kg"] = (econ["total_revenue"] / econ["total_weight"].replace(0, 1)).round(3)
+    econ["profit_per_kg"] = (econ["gross_profit"] / econ["total_weight"].replace(0, 1)).round(3)
+    return econ.sort_values("revenue_per_kg", ascending=False)

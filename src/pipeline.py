@@ -9,10 +9,14 @@ import pandas as pd
 
 from alert_engine import run_all_alerts
 from data_loader import get_data_summary, load_data, preprocess_orders, validate_orders
+from diagnosis_engine import generate_diagnosis
 from export_excel import export_to_excel
+from goal_tracker import calc_goal_progress, summarize_goals
 from kpi_analyzer import (
     calc_city_ranking,
+    calc_customer_abc,
     calc_customer_segment,
+    calc_distance_mix,
     calc_efficiency_metrics,
     calc_monthly_trend,
     calc_mom_growth,
@@ -21,10 +25,16 @@ from kpi_analyzer import (
     calc_revenue_summary,
     calc_sales_rep_ranking,
     calc_top_customers,
+    calc_unit_economics_by_region,
     calc_yoy_growth,
 )
 from report_generator import generate_html_report
 from visualizer import generate_all_charts
+
+try:
+    from notifier import send_alert_notifications
+except ImportError:
+    send_alert_notifications = None
 
 
 @dataclass
@@ -44,6 +54,14 @@ class AnalysisResult:
     region_product: pd.DataFrame
     city_ranking: pd.DataFrame
     alerts: List[dict]
+    goals: List[dict] = field(default_factory=list)
+    goal_summary: dict = field(default_factory=dict)
+    goal_period: str = ""
+    notify_result: dict = field(default_factory=dict)
+    customer_abc: pd.DataFrame = field(default_factory=pd.DataFrame)
+    distance_mix: pd.DataFrame = field(default_factory=pd.DataFrame)
+    unit_economics: pd.DataFrame = field(default_factory=pd.DataFrame)
+    diagnosis: dict = field(default_factory=dict)
     validation_errors: List[str] = field(default_factory=list)
     chart_paths: List[Path] = field(default_factory=list)
     html_path: Optional[Path] = None
@@ -85,7 +103,18 @@ def run_analysis(
     sales_ranking = calc_sales_rep_ranking(df)
     region_product = calc_region_product_matrix(df)
     city_ranking = calc_city_ranking(df)
+    customer_abc = calc_customer_abc(df)
+    distance_mix = calc_distance_mix(df)
+    unit_economics = calc_unit_economics_by_region(df)
     alerts = run_all_alerts(df, region_summary, mom, config)
+    from alert_engine import check_goal_alerts
+    goals, goal_period = calc_goal_progress(metrics, monthly, config.get("goals", {}))
+    alerts.extend(check_goal_alerts(goals))
+    goal_summary = summarize_goals(goals)
+    diagnosis = generate_diagnosis(
+        metrics, region_summary, product_mix, top_customers,
+        customer_abc, distance_mix, mom, goals, alerts, config,
+    )
 
     result = AnalysisResult(
         df=df,
@@ -102,9 +131,24 @@ def run_analysis(
         region_product=region_product,
         city_ranking=city_ranking,
         alerts=alerts,
+        goals=goals,
+        goal_summary=goal_summary,
+        goal_period=goal_period,
+        customer_abc=customer_abc,
+        distance_mix=distance_mix,
+        unit_economics=unit_economics,
+        diagnosis=diagnosis,
         validation_errors=errors if not ok else [],
         run_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )
+
+    # 预警通知
+    if send_alert_notifications and alerts:
+        result.notify_result = send_alert_notifications(
+            alerts, config, output_dir,
+            goals=goals,
+            run_at=result.run_at,
+        )
 
     if generate_charts:
         charts_dir.mkdir(parents=True, exist_ok=True)
@@ -123,6 +167,7 @@ def run_analysis(
             region_summary, monthly, product_mix,
             customer_seg, top_customers, sales_ranking,
             mom, alerts, result.chart_paths,
+            diagnosis=diagnosis,
         )
 
     if generate_excel:
@@ -130,8 +175,31 @@ def run_analysis(
         ts = datetime.now().strftime("%Y%m%d_%H%M")
         result.excel_path = export_to_excel(
             export_dir / f"analysis_{ts}.xlsx",
-            metrics, region_summary, mom, product_mix,
-            customer_seg, top_customers, sales_ranking, alerts,
+            metrics=metrics,
+            region_summary=region_summary,
+            monthly=monthly,
+            mom=mom,
+            product_mix=product_mix,
+            customer_seg=customer_seg,
+            top_customers=top_customers,
+            sales_ranking=sales_ranking,
+            alerts=alerts,
+            goals=goals,
+            goal_summary=goal_summary,
+            data_summary=result.data_summary,
+            project_name=project_name,
+            run_at=result.run_at,
+            yoy=yoy,
+            city_ranking=city_ranking,
+            region_product=region_product,
+            chart_paths=result.chart_paths,
+            raw_df=df,
+            include_raw=config.get("excel", {}).get("include_raw_data", True),
+            max_raw_rows=config.get("excel", {}).get("max_raw_rows", 500),
+            diagnosis=diagnosis,
+            customer_abc=customer_abc,
+            distance_mix=distance_mix,
+            unit_economics=unit_economics,
         )
 
     if generate_dashboard:
@@ -143,6 +211,7 @@ def run_analysis(
             dashboard_dir / "index.html",
             project_name,
             refresh_sec,
+            embedded_data=result_to_api_dict(result),
         )
 
     return result
@@ -163,4 +232,11 @@ def result_to_api_dict(result: AnalysisResult) -> Dict[str, Any]:
         "sales": result.sales_ranking.to_dict(orient="records"),
         "cities": result.city_ranking.to_dict(orient="records"),
         "alerts": result.alerts,
+        "goals": result.goals,
+        "goal_summary": result.goal_summary,
+        "goal_period": result.goal_period,
+        "diagnosis": result.diagnosis,
+        "customer_abc": result.customer_abc.to_dict(orient="records") if not result.customer_abc.empty else [],
+        "distance_mix": result.distance_mix.to_dict(orient="records") if not result.distance_mix.empty else [],
+        "unit_economics": result.unit_economics.to_dict(orient="records") if not result.unit_economics.empty else [],
     }
