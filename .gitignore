@@ -21,9 +21,10 @@ Thumbs.db
 
 # Output
 output/
-*.log
-reports/*.html
-!reports/.gitkeep
+!output/.gitkeep
+!output/charts/.gitkeep
+!output/reports/.gitkeep
+!output/export/.gitkeep
 
 # Jupyter
 .ipynb_checkpoints/

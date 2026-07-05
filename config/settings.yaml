@@ -1,0 +1,27 @@
+# 物流经营分析工具 - 配置文件
+
+project:
+  name: "物流经营数据分析平台"
+  version: "2.0.0"
+  author: "德邦经营方向 · 海豚生"
+
+data:
+  default_input: "data/sample/orders.csv"
+  encoding: "utf-8-sig"
+
+analysis:
+  margin_warning_threshold: 20.0    # 毛利率低于此值触发预警 (%)
+  delivery_sla_days: 3              # 标准时效 (天)
+  satisfaction_pass_score: 4.0      # 满意度及格线
+
+output:
+  dir: "output"
+  charts_dir: "output/charts"
+  reports_dir: "output/reports"
+  export_dir: "output/export"
+
+visual:
+  primary_color: "#0066CC"
+  secondary_color: "#FF9900"
+  accent_color: "#00AA66"
+  dpi: 150
