@@ -2,23 +2,35 @@
 
 project:
   name: "物流经营数据分析平台"
-  version: "2.0.0"
+  version: "3.0.0"
   author: "德邦经营方向 · 海豚生"
 
 data:
   default_input: "data/sample/orders.csv"
   encoding: "utf-8-sig"
+  inbox_dir: "data/inbox"           # 自动化监听目录
+  processed_dir: "data/processed"   # 已处理文件归档
 
 analysis:
-  margin_warning_threshold: 20.0    # 毛利率低于此值触发预警 (%)
-  delivery_sla_days: 3              # 标准时效 (天)
-  satisfaction_pass_score: 4.0      # 满意度及格线
+  margin_warning_threshold: 20.0
+  delivery_sla_days: 3
+  satisfaction_pass_score: 4.0
 
 output:
   dir: "output"
   charts_dir: "output/charts"
   reports_dir: "output/reports"
   export_dir: "output/export"
+  dashboard_dir: "output/dashboard"
+
+dashboard:
+  auto_refresh_seconds: 60          # 大屏自动刷新间隔(秒)
+  web_host: "127.0.0.1"
+  web_port: 8080
+
+automation:
+  schedule_interval_minutes: 30     # 默认定时分析间隔
+  watch_poll_seconds: 5             # 文件监听轮询间隔
 
 visual:
   primary_color: "#0066CC"
