@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output
+output/
+*.log
+reports/*.html
+!reports/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (keep sample only)
+data/raw/
+!data/sample/
